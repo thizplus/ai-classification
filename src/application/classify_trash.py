@@ -43,50 +43,24 @@ class ClassifyTrashUseCase:
             raise
 
         # Step 2: L0 - Object Detection (if detector available)
+        # L0 แค่รายงานว่าเจอ/ไม่เจออะไร ไม่มีสิทธิ์หยุด flow
+        # ส่งต่อให้ L1 เสมอ เพื่อให้เห็นปัญหาและ debug ได้
         detection = None
         if self._detector:
             try:
                 print(f"[UseCase] Running L0 (YOLO) detection...", flush=True)
                 detection = self._detector.detect(image)
-                print(f"[UseCase] L0 result: found={detection.found}, conf={detection.confidence:.2f}, label={detection.label}", flush=True)
 
-                if not detection.found:
-                    print(f"[UseCase] L0 REJECT: No object found", flush=True)
-                    return ClassificationResult(
-                        category=None,
-                        confidence=0.0,
-                        model_used="yolo_reject",
-                        metadata={
-                            "rejected": True,
-                            "reason": "no_object_found",
-                            "message": "ไม่พบวัตถุในภาพ"
-                        }
-                    )
-
-                if detection.confidence < self._detector.confidence_threshold:
-                    print(f"[UseCase] L0 REJECT: Low confidence ({detection.confidence:.2f} < {self._detector.confidence_threshold})", flush=True)
-                    return ClassificationResult(
-                        category=None,
-                        confidence=detection.confidence,
-                        model_used="yolo_reject",
-                        metadata={
-                            "rejected": True,
-                            "reason": "low_confidence",
-                            "message": "ตรวจจับวัตถุไม่ชัดเจน",
-                            "detected_label": detection.label
-                        }
-                    )
-
-                # Crop ROI from bounding box
-                if detection.bbox:
-                    print(f"[UseCase] Cropping ROI: {detection.bbox.to_tuple()}", flush=True)
-                    image = image.crop(detection.bbox.to_tuple())
-                    print(f"[UseCase] Cropped image size: {image.size}", flush=True)
+                if detection.found:
+                    print(f"[UseCase] L0 detected: {detection.label} (conf={detection.confidence:.2f})", flush=True)
+                else:
+                    print(f"[UseCase] L0: No object detected, but continuing to L1...", flush=True)
 
             except Exception as e:
                 print(f"[UseCase] ERROR in L0 detection: {e}", flush=True)
+                print(f"[UseCase] Continuing to L1 despite L0 error...", flush=True)
                 traceback.print_exc()
-                raise
+                # ไม่ raise - ให้ L1 ทำงานต่อ
         else:
             print(f"[UseCase] L0 disabled, skipping detection", flush=True)
 
@@ -110,9 +84,15 @@ class ClassifyTrashUseCase:
             raise
 
         # Add L0 info to metadata if detector was used
-        if detection:
-            result.metadata["l0_label"] = detection.label
-            result.metadata["l0_confidence"] = detection.confidence
+        if self._detector:
+            if detection and detection.found:
+                result.metadata["l0_detected"] = True
+                result.metadata["l0_label"] = detection.label
+                result.metadata["l0_confidence"] = detection.confidence
+            else:
+                result.metadata["l0_detected"] = False
+                result.metadata["l0_label"] = None
+                result.metadata["l0_confidence"] = 0.0
 
         print(f"[UseCase] Classification complete!", flush=True)
         return result

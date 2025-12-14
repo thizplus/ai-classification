@@ -30,7 +30,8 @@ async def lifespan(app: FastAPI):
     if enable_l0:
         print("[Startup] Loading L0 - YOLO Detector...")
         l0_threshold = float(os.getenv("L0_CONFIDENCE_THRESHOLD", "0.3"))
-        detector = YOLODetector(threshold=l0_threshold)
+        l0_model_path = os.getenv("L0_MODEL_PATH", "yolov8n.pt")
+        detector = YOLODetector(model_name=l0_model_path, threshold=l0_threshold)
     else:
         print("[Startup] L0 Detection disabled")
         detector = None

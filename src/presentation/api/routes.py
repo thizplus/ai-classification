@@ -52,11 +52,16 @@ async def classify_trash(request: ClassifyRequest):
         result = classify_use_case.execute(str(request.image_url))
         result_dict = result.to_dict()
 
-        # Check if L0 rejected
-        if result_dict.get("rejected"):
-            print(f"[API] L0 Rejected: {result_dict.get('reject_reason', 'unknown')}")
-        else:
-            print(f"[API] Result: {result_dict['category']} ({result_dict['confidence']:.2%})")
+        # Log L0 and L1 results
+        l0_detected = result_dict.get("l0_detected", False)
+        l0_label = result_dict.get("l0_label")
+        l0_conf = result_dict.get("l0_confidence", 0.0)
+
+        print(f"[API] ========== CLASSIFICATION RESULT ==========")
+        print(f"[API] L0 (YOLO): detected={l0_detected}, label={l0_label}, conf={l0_conf:.2%}" if l0_conf else f"[API] L0 (YOLO): detected={l0_detected}")
+        print(f"[API] L1 (Trash-Net): {result_dict['category']} ({result_dict['confidence']:.2%})")
+        print(f"[API] Bin: #{result_dict.get('bin_number', 0)} - {result_dict.get('bin_label', 'N/A')}")
+        print(f"[API] =============================================")
 
         return ClassifyResponse(
             success=True,
@@ -68,6 +73,9 @@ async def classify_trash(request: ClassifyRequest):
             model_used=result_dict.get("model_used", "unknown"),
             sub_category=result_dict.get("sub_category"),
             sub_confidence=result_dict.get("sub_confidence"),
+            l0_detected=l0_detected,
+            l0_label=l0_label,
+            l0_confidence=result_dict.get("l0_confidence"),
             trash_id=request.trash_id
         )
 

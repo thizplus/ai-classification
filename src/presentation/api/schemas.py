@@ -19,6 +19,9 @@ class ClassifyResponse(BaseModel):
     model_used: str
     sub_category: Optional[str] = None
     sub_confidence: Optional[float] = None
+    l0_detected: Optional[bool] = None  # L0 พบวัตถุหรือไม่
+    l0_label: Optional[str] = None  # YOLO detected object (bottle, cup, etc.)
+    l0_confidence: Optional[float] = None  # YOLO confidence
     trash_id: Optional[str] = None
 
 

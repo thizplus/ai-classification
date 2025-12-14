@@ -54,6 +54,12 @@ class ClassificationResult:
             "message": f"ทิ้งช่อง {bin_info['number']} - {bin_info['label_th']}",
         }
 
+        # Add L0 detection info if available
+        if "l0_detected" in self.metadata:
+            result["l0_detected"] = self.metadata["l0_detected"]
+            result["l0_label"] = self.metadata.get("l0_label")
+            result["l0_confidence"] = round(self.metadata.get("l0_confidence", 0), 4)
+
         if self.sub_result and self.sub_result.category is not None:
             result["sub_category"] = self.sub_result.category.value
             result["sub_confidence"] = round(self.sub_result.confidence, 4)
